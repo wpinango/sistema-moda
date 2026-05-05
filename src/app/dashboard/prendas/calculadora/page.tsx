@@ -17,7 +17,6 @@ import {
   Save,
   TrendingUp,
   Package,
-  Clock,
   DollarSign,
 } from "lucide-react"
 
@@ -43,7 +42,7 @@ export default function CalculadoraPage() {
   const [prendaBaseId, setPrendaBaseId] = useState("")
   const [clienteId, setClienteId] = useState("")
   const [talla, setTalla] = useState("")
-  const [tiempoMinutos, setTiempoMinutos] = useState(60)
+  const [costoManoObra, setCostoManoObra] = useState("")
   const [margenPorcentaje, setMargenPorcentaje] = useState(40)
   const [esParaInventario, setEsParaInventario] = useState(false)
   const [cantidadInventario, setCantidadInventario] = useState(0)
@@ -100,7 +99,6 @@ export default function CalculadoraPage() {
     const prenda = prendasBase.find((p) => p.id === id)
     if (prenda) {
       setNombre(prenda.nombre)
-      setTiempoMinutos(prenda.tiempoEstimadoMin)
       setMargenPorcentaje(Number(prenda.margenSugeridoPct))
       const materiales = prenda.materiales.map((m: any) => ({
         materialId: m.materialId,
@@ -169,7 +167,8 @@ export default function CalculadoraPage() {
       (sum, cv) => sum + Number(cv.monto),
       0,
     )
-    const resultado = calcularCostosPrenda(materialesSeleccionados, tiempoMinutos, {
+    const manoObraNum = parseFloat(costoManoObra) || 0
+    const resultado = calcularCostosPrenda(materialesSeleccionados, manoObraNum, {
       margenPorcentaje,
     })
     resultado.costoTotalUnitario = Number(resultado.costoTotalUnitario) + totalCostosVariables
@@ -208,7 +207,7 @@ export default function CalculadoraPage() {
           precioVentaUnitario: resultado.precioVentaUnitario,
           precioVentaDocena: resultado.precioDocena,
           margenAplicadoPct: resultado.margenAplicado,
-          tiempoRealMin: tiempoMinutos,
+          tiempoRealMin: null,
           esReferencia: true,
           esParaInventario,
           cantidadInventario: esParaInventario ? cantidadInventario : 0,
@@ -245,6 +244,7 @@ export default function CalculadoraPage() {
       setPrendaBaseId("")
       setClienteId("")
       setTalla("")
+      setCostoManoObra("")
       setMaterialesSeleccionados([])
       setCostosVariables([])
       setResultado(null)
@@ -333,15 +333,18 @@ export default function CalculadoraPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="tiempo" className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" />
-                    Tiempo (minutos)
+                  <Label htmlFor="costoManoObra" className="flex items-center gap-1.5">
+                    <DollarSign className="h-3.5 w-3.5" />
+                    Mano de obra ($) — opcional
                   </Label>
                   <Input
-                    id="tiempo"
+                    id="costoManoObra"
                     type="number"
-                    value={tiempoMinutos}
-                    onChange={(e) => setTiempoMinutos(Number(e.target.value))}
+                    step="0.01"
+                    min="0"
+                    value={costoManoObra}
+                    onChange={(e) => setCostoManoObra(e.target.value)}
+                    placeholder="0.00"
                   />
                 </div>
 

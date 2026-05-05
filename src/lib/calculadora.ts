@@ -7,7 +7,6 @@ export interface CostoMaterial {
 }
 
 export interface CalculoPrendaConfig {
-  costoHoraManoObra: number
   porcentajeCostosIndirectos: number
   margenPorcentaje: number
   descuentoDocena: number
@@ -24,12 +23,10 @@ export interface ResultadoCalculo {
   margenAplicado: number
   gananciaUnitaria: number
   materiales: CostoMaterial[]
-  tiempoMinutos: number
 }
 
 // Configuración por defecto (se sobrescribe con valores de BD)
 const CONFIG_DEFAULT: CalculoPrendaConfig = {
-  costoHoraManoObra: 15, // USD por hora
   porcentajeCostosIndirectos: 20, // 20% sobre materiales + mano de obra
   margenPorcentaje: 40, // 40% de ganancia
   descuentoDocena: 15, // 15% de descuento en docena
@@ -40,15 +37,12 @@ export async function obtenerConfiguracion(): Promise<Partial<CalculoPrendaConfi
   try {
     const response = await fetch('/api/configuracion')
     if (!response.ok) return {}
-    
+
     const configs = await response.json()
     const config: Partial<CalculoPrendaConfig> = {}
-    
+
     configs.forEach((c: any) => {
       switch (c.clave) {
-        case 'costo_mano_obra_hora':
-          config.costoHoraManoObra = parseFloat(c.valor)
-          break
         case 'porcentaje_costos_indirectos':
           config.porcentajeCostosIndirectos = parseFloat(c.valor)
           break
@@ -60,7 +54,7 @@ export async function obtenerConfiguracion(): Promise<Partial<CalculoPrendaConfi
           break
       }
     })
-    
+
     return config
   } catch (error) {
     console.error('Error al obtener configuración:', error)
@@ -70,33 +64,32 @@ export async function obtenerConfiguracion(): Promise<Partial<CalculoPrendaConfi
 
 export function calcularCostosPrenda(
   materiales: CostoMaterial[],
-  tiempoMinutos: number,
+  costoManoObra: number = 0,
   config: Partial<CalculoPrendaConfig> = {}
 ): ResultadoCalculo {
-  
+
   const cfg = { ...CONFIG_DEFAULT, ...config }
-  
+
   const costoMateriales = materiales.reduce(
     (total, m) => total + (m.cantidad * m.costoUnitario),
     0
   )
-  
-  const horas = tiempoMinutos / 60
-  const costoManoObra = horas * cfg.costoHoraManoObra
-  
-  const costosIndirectos = (costoMateriales + costoManoObra) * 
+
+  const manoObra = Number.isFinite(costoManoObra) && costoManoObra > 0 ? costoManoObra : 0
+
+  const costosIndirectos = (costoMateriales + manoObra) *
     (cfg.porcentajeCostosIndirectos / 100)
-  
-  const costoTotalUnitario = costoMateriales + costoManoObra + costosIndirectos
-  
+
+  const costoTotalUnitario = costoMateriales + manoObra + costosIndirectos
+
   const precioVentaUnitario = costoTotalUnitario * (1 + cfg.margenPorcentaje / 100)
-  
+
   const precioUnitarioEnDocena = precioVentaUnitario * (1 - cfg.descuentoDocena / 100)
   const precioDocena = precioUnitarioEnDocena * 12
-  
+
   return {
     costoMateriales: redondear(costoMateriales),
-    costoManoObra: redondear(costoManoObra),
+    costoManoObra: redondear(manoObra),
     costosIndirectos: redondear(costosIndirectos),
     costoTotalUnitario: redondear(costoTotalUnitario),
     precioVentaUnitario: redondear(precioVentaUnitario),
@@ -108,7 +101,6 @@ export function calcularCostosPrenda(
       ...m,
       subtotal: redondear(m.cantidad * m.costoUnitario)
     })) as any,
-    tiempoMinutos
   }
 }
 

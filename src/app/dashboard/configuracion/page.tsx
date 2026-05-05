@@ -15,7 +15,6 @@ export default function ConfiguracionPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
 
-  const [costoManoObraHora, setCostoManoObraHora] = useState("15")
   const [porcentajeCostosIndirectos, setPorcentajeCostosIndirectos] = useState("20")
   const [margenGananciaPorDefecto, setMargenGananciaPorDefecto] = useState("40")
   const [descuentoDocena, setDescuentoDocena] = useState("15")
@@ -31,9 +30,6 @@ export default function ConfiguracionPage() {
         const configs = await response.json()
         configs.forEach((config: any) => {
           switch (config.clave) {
-            case "costo_mano_obra_hora":
-              setCostoManoObraHora(config.valor)
-              break
             case "porcentaje_costos_indirectos":
               setPorcentajeCostosIndirectos(config.valor)
               break
@@ -57,7 +53,6 @@ export default function ConfiguracionPage() {
     setIsSaving(true)
     try {
       const configuraciones = [
-        { clave: "costo_mano_obra_hora", valor: costoManoObraHora },
         { clave: "porcentaje_costos_indirectos", valor: porcentajeCostosIndirectos },
         { clave: "margen_ganancia_defecto", valor: margenGananciaPorDefecto },
         { clave: "descuento_docena", valor: descuentoDocena },
@@ -87,12 +82,12 @@ export default function ConfiguracionPage() {
   }
 
   // Cálculos para vista previa
-  const costoManoObra = parseFloat(costoManoObraHora) || 0
   const indirectosPct = parseFloat(porcentajeCostosIndirectos) || 0
   const margenPct = parseFloat(margenGananciaPorDefecto) || 0
   const materialesEjemplo = 50
-  const indirectos = (materialesEjemplo + costoManoObra) * (indirectosPct / 100)
-  const costoTotal = materialesEjemplo + costoManoObra + indirectos
+  const manoObraEjemplo = 10
+  const indirectos = (materialesEjemplo + manoObraEjemplo) * (indirectosPct / 100)
+  const costoTotal = materialesEjemplo + manoObraEjemplo + indirectos
   const precioVenta = costoTotal * (1 + margenPct / 100)
 
   return (
@@ -124,20 +119,6 @@ export default function ConfiguracionPage() {
             <CardDescription>Configura los costos fijos y variables</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="costoManoObra">Costo de mano de obra por hora ($)</Label>
-              <Input
-                id="costoManoObra"
-                type="number"
-                step="0.01"
-                value={costoManoObraHora}
-                onChange={(e) => setCostoManoObraHora(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Valor actual: ${costoManoObraHora}/hora
-              </p>
-            </div>
-
             <div className="space-y-1.5">
               <Label htmlFor="costosIndirectos">Costos indirectos (%)</Label>
               <Input
@@ -201,18 +182,18 @@ export default function ConfiguracionPage() {
             Vista previa del cálculo
           </CardTitle>
           <CardDescription>
-            Ejemplo con $50 de materiales y 60 minutos de trabajo
+            Ejemplo con $50 de materiales y $10 de mano de obra
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Mano de obra (60 min)</span>
-              <span className="font-medium tabular-nums">${costoManoObra.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
               <span className="text-muted-foreground">Materiales</span>
               <span className="font-medium tabular-nums">$50.00</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Mano de obra</span>
+              <span className="font-medium tabular-nums">${manoObraEjemplo.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">
