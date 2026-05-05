@@ -22,7 +22,7 @@ const prendaBaseSchema = z.object({
   materiales: z.array(z.object({
     materialId: z.string().min(1, "Selecciona un material"),
     cantidad: z.string().min(1, "La cantidad es requerida"),
-    esObligatorio: z.boolean().default(true),
+    esObligatorio: z.boolean(),
     notas: z.string().optional(),
   })).min(1, "Agrega al menos un material"),
 })
@@ -60,7 +60,7 @@ export function PrendaBaseForm({ prenda, onSuccess, onCancel }: PrendaBaseFormPr
       materiales: prenda.materiales?.map((m: any) => ({
         materialId: m.materialId,
         cantidad: m.cantidad?.toString(),
-        esObligatorio: m.esObligatorio,
+        esObligatorio: m.esObligatorio ?? true,
         notas: m.notas || "",
       })) || [{ materialId: "", cantidad: "", esObligatorio: true, notas: "" }],
     } : {
