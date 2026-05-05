@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -12,12 +12,13 @@ export async function POST(
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
+    const { id } = await params
     const body = await request.json()
     const { busto, cintura, cadera, largoManga, largoTotal, personalizadas, notas } = body
 
     const medida = await prisma.medida.create({
       data: {
-        clienteId: params.id,
+        clienteId: id,
         busto: busto ? parseFloat(busto) : null,
         cintura: cintura ? parseFloat(cintura) : null,
         cadera: cadera ? parseFloat(cadera) : null,

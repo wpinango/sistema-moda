@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -12,8 +12,9 @@ export async function DELETE(
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
+    const { id } = await params
     await prisma.transaccion.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ message: "Transacción eliminada" })
