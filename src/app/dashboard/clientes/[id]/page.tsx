@@ -144,6 +144,28 @@ export default function ClienteDetailPage() {
                 {renderMedida("Cadera", ultimaMedida.cadera)}
                 {renderMedida("Largo manga", ultimaMedida.largoManga)}
                 {renderMedida("Largo total", ultimaMedida.largoTotal, true)}
+                {Array.isArray(ultimaMedida.personalizadas) &&
+                  ultimaMedida.personalizadas
+                    .filter(
+                      (p: any) =>
+                        p?.titulo &&
+                        p?.valor !== undefined &&
+                        p?.valor !== null &&
+                        p?.valor !== "",
+                    )
+                    .map((p: any, index: number) => (
+                      <div key={`${p.titulo}-${index}`}>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          {p.titulo}
+                        </p>
+                        <p className="text-xl font-semibold tabular-nums">
+                          {Number(p.valor)}
+                          <span className="ml-1 text-sm font-normal text-muted-foreground">
+                            cm
+                          </span>
+                        </p>
+                      </div>
+                    ))}
                 {ultimaMedida.notas && (
                   <div className="col-span-2 border-t border-border/60 pt-3">
                     <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">

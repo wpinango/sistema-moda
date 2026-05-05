@@ -75,12 +75,16 @@ export async function PUT(
 
     // Si hay medidas, verificar si tienen valores y crearlas
     if (medidas) {
-      const tieneMedidas = 
-        medidas.busto || 
-        medidas.cintura || 
-        medidas.cadera || 
-        medidas.largoManga || 
-        medidas.largoTotal
+      const tienePersonalizadas =
+        Array.isArray(medidas.personalizadas) && medidas.personalizadas.length > 0
+
+      const tieneMedidas =
+        medidas.busto ||
+        medidas.cintura ||
+        medidas.cadera ||
+        medidas.largoManga ||
+        medidas.largoTotal ||
+        tienePersonalizadas
 
       if (tieneMedidas) {
         try {
@@ -92,6 +96,7 @@ export async function PUT(
               cadera: medidas.cadera ? parseFloat(medidas.cadera) : null,
               largoManga: medidas.largoManga ? parseFloat(medidas.largoManga) : null,
               largoTotal: medidas.largoTotal ? parseFloat(medidas.largoTotal) : null,
+              personalizadas: tienePersonalizadas ? medidas.personalizadas : null,
               notas: medidas.notas || null,
             }
           })

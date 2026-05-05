@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useFieldArray, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
+import { Loader2, Plus, Trash2 } from "lucide-react"
 
 const clienteSchema = z.object({
   nombre: z.string().min(1, "El nombre es requerido"),
@@ -24,6 +24,14 @@ const clienteSchema = z.object({
     cadera: z.string().optional(),
     largoManga: z.string().optional(),
     largoTotal: z.string().optional(),
+    personalizadas: z
+      .array(
+        z.object({
+          titulo: z.string().optional(),
+          valor: z.string().optional(),
+        }),
+      )
+      .optional(),
     notas: z.string().optional(),
   }).optional(),
 })
@@ -41,6 +49,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<ClienteFormData>({
@@ -57,9 +66,27 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
         cadera: cliente.medidas[0].cadera?.toString() || "",
         largoManga: cliente.medidas[0].largoManga?.toString() || "",
         largoTotal: cliente.medidas[0].largoTotal?.toString() || "",
+        personalizadas: Array.isArray(cliente.medidas[0].personalizadas)
+          ? cliente.medidas[0].personalizadas.map((p: any) => ({
+              titulo: p?.titulo?.toString() || "",
+              valor:
+                p?.valor !== undefined && p?.valor !== null
+                  ? p.valor.toString()
+                  : "",
+            }))
+          : [],
         notas: cliente.medidas[0].notas || "",
       } : undefined,
     } : undefined,
+  })
+
+  const {
+    fields: personalizadasFields,
+    append: appendPersonalizada,
+    remove: removePersonalizada,
+  } = useFieldArray({
+    control,
+    name: "medidas.personalizadas",
   })
 
   const onSubmit = async (data: ClienteFormData) => {
@@ -68,11 +95,30 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
       const url = cliente
         ? `/api/clientes/${cliente.id}`
         : "/api/clientes"
-      
+
+      const personalizadasLimpias = (data.medidas?.personalizadas ?? [])
+        .map((p) => ({
+          titulo: p.titulo?.trim() ?? "",
+          valor: p.valor?.trim() ?? "",
+        }))
+        .filter((p) => p.titulo && p.valor && !Number.isNaN(parseFloat(p.valor)))
+        .map((p) => ({ titulo: p.titulo, valor: parseFloat(p.valor) }))
+
+      const payload = {
+        ...data,
+        medidas: data.medidas
+          ? {
+              ...data.medidas,
+              personalizadas:
+                personalizadasLimpias.length > 0 ? personalizadasLimpias : null,
+            }
+          : undefined,
+      }
+
       const response = await fetch(url, {
         method: cliente ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) throw new Error("Error al guardar cliente")
@@ -216,6 +262,75 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
                 placeholder="150.00"
               />
             </div>
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-border/60 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <Label className="text-sm font-medium">
+                  Medidas personalizadas
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Agrega medidas adicionales con un título y valor numérico.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => appendPersonalizada({ titulo: "", valor: "" })}
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                Agregar
+              </Button>
+            </div>
+
+            {personalizadasFields.length > 0 && (
+              <div className="space-y-2">
+                {personalizadasFields.map((field, index) => (
+                  <div key={field.id} className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <Label
+                        htmlFor={`personalizada-titulo-${index}`}
+                        className="text-xs text-muted-foreground"
+                      >
+                        Título
+                      </Label>
+                      <Input
+                        id={`personalizada-titulo-${index}`}
+                        {...register(`medidas.personalizadas.${index}.titulo`)}
+                        placeholder="Ej: Hombros"
+                      />
+                    </div>
+                    <div className="w-32">
+                      <Label
+                        htmlFor={`personalizada-valor-${index}`}
+                        className="text-xs text-muted-foreground"
+                      >
+                        Valor (cm)
+                      </Label>
+                      <Input
+                        id={`personalizada-valor-${index}`}
+                        type="number"
+                        step="0.01"
+                        {...register(`medidas.personalizadas.${index}.valor`)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removePersonalizada(index)}
+                      aria-label="Eliminar medida"
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
