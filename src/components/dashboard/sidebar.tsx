@@ -104,7 +104,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </Link>
       </div>
 
-      <ScrollArea className="flex-1 px-3">
+      <ScrollArea className="min-h-0 flex-1 px-3">
         <nav className="space-y-6 pb-4">
           {routeGroups.map((group) => (
             <div key={group.label} className="space-y-1">
