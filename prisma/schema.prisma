@@ -1,0 +1,258 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==================== USUARIOS ====================
+model Usuario {
+  id        String   @id @default(cuid())
+  nombre    String
+  email     String   @unique
+  password  String
+  rol       String   @default("ADMIN")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("usuarios")
+}
+
+// ==================== CLIENTES ====================
+model Cliente {
+  id          String   @id @default(cuid())
+  nombre      String
+  email       String?
+  telefono    String?
+  direccion   String?
+  notas       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  medidas     Medida[]
+  prendas     PrendaCalculada[]
+  cotizaciones Cotizacion[]
+
+  @@map("clientes")
+}
+
+// ==================== MEDIDAS DE CLIENTES ====================
+model Medida {
+  id            String   @id @default(cuid())
+  clienteId     String   @map("cliente_id")
+  fechaToma     DateTime @default(now()) @map("fecha_toma")
+  
+  busto         Decimal? @db.Decimal(5,2)
+  cintura       Decimal? @db.Decimal(5,2)
+  cadera        Decimal? @db.Decimal(5,2)
+  largoManga    Decimal? @db.Decimal(5,2) @map("largo_manga")
+  largoTotal    Decimal? @db.Decimal(5,2) @map("largo_total")
+  
+  personalizadas Json?
+  
+  notas         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  cliente       Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@map("medidas")
+}
+
+// ==================== MATERIALES ====================
+model Material {
+  id              String   @id @default(cuid())
+  nombre          String
+  tipo            String
+  unidadMedida    String   @map("unidad_medida")
+  color           String?
+  stockActual     Decimal  @default(0) @db.Decimal(10,3) @map("stock_actual")
+  stockMinimo     Decimal  @default(0) @db.Decimal(10,3) @map("stock_minimo")
+  costoUnitario   Decimal  @default(0) @db.Decimal(10,2) @map("costo_unitario")
+  proveedor       String?
+  notas           String?
+  activo          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  prendasBase      PrendaBaseMaterial[]
+  prendasCalculadas PrendaCalculadaMaterial[]
+
+  @@map("materiales")
+}
+
+// ==================== PRENDAS BASE (PLANTILLAS) ====================
+model PrendaBase {
+  id                String   @id @default(cuid())
+  nombre            String
+  categoria         String
+  complejidad       String   @default("MEDIA")
+  tiempoEstimadoMin Int      @default(60) @map("tiempo_estimado_min")
+  margenSugeridoPct Decimal  @default(40) @db.Decimal(5,2) @map("margen_sugerido_pct")
+  activo            Boolean  @default(true)
+  descripcion       String?
+  instrucciones     String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  materiales  PrendaBaseMaterial[]
+  calculadas  PrendaCalculada[]
+
+  @@map("prendas_base")
+}
+
+model PrendaBaseMaterial {
+  id            String   @id @default(cuid())
+  prendaBaseId  String   @map("prenda_base_id")
+  materialId    String   @map("material_id")
+  cantidad      Decimal  @db.Decimal(10,3)
+  esObligatorio Boolean  @default(true) @map("es_obligatorio")
+  notas         String?
+
+  prendaBase  PrendaBase @relation(fields: [prendaBaseId], references: [id], onDelete: Cascade)
+  material    Material   @relation(fields: [materialId], references: [id])
+
+  @@unique([prendaBaseId, materialId])
+  @@map("prendas_base_materiales")
+}
+
+// ==================== PRENDAS CALCULADAS ====================
+model PrendaCalculada {
+  id                  String   @id @default(cuid())
+  prendaBaseId        String?  @map("prenda_base_id")
+  clienteId           String?  @map("cliente_id")
+  nombre              String
+  fechaCalculo        DateTime @default(now()) @map("fecha_calculo")
+  
+  costoMateriales     Decimal  @default(0) @db.Decimal(10,2) @map("costo_materiales")
+  costoManoObra       Decimal  @default(0) @db.Decimal(10,2) @map("costo_mano_obra")
+  costosIndirectos    Decimal  @default(0) @db.Decimal(10,2) @map("costos_indirectos")
+  costoTotalUnitario  Decimal  @default(0) @db.Decimal(10,2) @map("costo_total_unitario")
+  
+  precioVentaUnitario Decimal  @default(0) @db.Decimal(10,2) @map("precio_venta_unitario")
+  precioVentaDocena   Decimal  @default(0) @db.Decimal(10,2) @map("precio_venta_docena")
+  margenAplicadoPct   Decimal  @default(0) @db.Decimal(5,2) @map("margen_aplicado_pct")
+  
+  talla               String?
+  esParaInventario    Boolean  @default(false) @map("es_para_inventario")
+  cantidadInventario  Int      @default(0) @map("cantidad_inventario")
+  cantidadVendida     Int      @default(0) @map("cantidad_vendida")
+  stockMinimo         Int      @default(0) @map("stock_minimo")
+  tiempoRealMin       Int?     @map("tiempo_real_min")
+  notasTecnicas       String?  @map("notas_tecnicas")
+  esReferencia        Boolean  @default(true) @map("es_referencia")
+  
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  prendaBase  PrendaBase? @relation(fields: [prendaBaseId], references: [id], onDelete: SetNull)
+  cliente     Cliente?    @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  materiales  PrendaCalculadaMaterial[]
+  cotizaciones Cotizacion[]
+  imagenes    ImagenPrenda[]
+  costosVariables CostoVariable[]
+
+  @@map("prendas_calculadas")
+}
+
+model PrendaCalculadaMaterial {
+  id                String   @id @default(cuid())
+  prendaCalculadaId String   @map("prenda_calculada_id")
+  materialId        String   @map("material_id")
+  cantidadUsada     Decimal  @db.Decimal(10,3) @map("cantidad_usada")
+  costoUnitario     Decimal  @db.Decimal(10,2) @map("costo_unitario_momento")
+  costoTotal        Decimal  @db.Decimal(10,2) @map("costo_total")
+
+  prendaCalculada PrendaCalculada @relation(fields: [prendaCalculadaId], references: [id], onDelete: Cascade)
+  material        Material        @relation(fields: [materialId], references: [id])
+
+  @@map("prendas_calculadas_materiales")
+}
+
+// ==================== COTIZACIONES ====================
+model Cotizacion {
+  id                String   @id @default(cuid())
+  clienteId         String   @map("cliente_id")
+  prendaCalculadaId String?  @map("prenda_calculada_id")
+  numero            String   @unique
+  
+  estado            String   @default("COTIZADO")
+  fechaEntrega      DateTime? @map("fecha_entrega")
+  
+  subtotal          Decimal  @db.Decimal(10,2)
+  descuento         Decimal  @default(0) @db.Decimal(10,2)
+  total             Decimal  @db.Decimal(10,2)
+  
+  notas             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  cliente         Cliente          @relation(fields: [clienteId], references: [id])
+  prendaCalculada PrendaCalculada? @relation(fields: [prendaCalculadaId], references: [id], onDelete: SetNull)
+
+  @@map("cotizaciones")
+}
+
+// ==================== FINANZAS ====================
+model Transaccion {
+  id          String   @id @default(cuid())
+  tipo        String
+  concepto    String
+  monto       Decimal  @db.Decimal(10,2)
+  fecha       DateTime @default(now())
+  categoria   String?
+  referencia  String?
+  notas       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("transacciones")
+}
+
+// ==================== CONFIGURACIÓN ====================
+model Configuracion {
+  id    String @id @default(cuid())
+  clave String @unique
+  valor String
+  
+  @@map("configuracion")
+}
+
+model CostoFijo {
+  id          String   @id @default(cuid())
+  nombre      String
+  monto       Decimal  @db.Decimal(10,2)
+  periodicidad String  @default("MENSUAL")
+  activo      Boolean  @default(true)
+  descripcion String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("costos_fijos")
+}
+
+model CostoVariable {
+  id                String   @id @default(cuid())
+  prendaCalculadaId String   @map("prenda_calculada_id")
+  concepto          String
+  monto             Decimal  @db.Decimal(10,2)
+  descripcion       String?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  prendaCalculada PrendaCalculada @relation(fields: [prendaCalculadaId], references: [id], onDelete: Cascade)
+
+  @@map("costos_variables")
+}
+
+// ==================== IMÁGENES DE PRENDAS ====================
+model ImagenPrenda {
+  id                String   @id @default(cuid())
+  prendaCalculadaId String   @map("prenda_calculada_id")
+  url               String
+  nombre            String?
+  orden             Int      @default(0)
+  esPrincipal       Boolean  @default(false) @map("es_principal")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  prendaCalculada PrendaCalculada @relation(fields: [prendaCalculadaId], references: [id], onDelete: Cascade)
+
+  @@map("imagenes_prendas")
+}
