@@ -29,7 +29,7 @@ export interface ResultadoCalculo {
 
 // Configuración por defecto (se sobrescribe con valores de BD)
 const CONFIG_DEFAULT: CalculoPrendaConfig = {
-  costoManoObraPorHora: 15, // USD por hora
+  costoHoraManoObra: 15, // USD por hora
   porcentajeCostosIndirectos: 20, // 20% sobre materiales + mano de obra
   margenPorcentaje: 40, // 40% de ganancia
   descuentoDocena: 15, // 15% de descuento en docena
@@ -47,7 +47,7 @@ export async function obtenerConfiguracion(): Promise<Partial<CalculoPrendaConfi
     configs.forEach((c: any) => {
       switch (c.clave) {
         case 'costo_mano_obra_hora':
-          config.costoManoObraPorHora = parseFloat(c.valor)
+          config.costoHoraManoObra = parseFloat(c.valor)
           break
         case 'porcentaje_costos_indirectos':
           config.porcentajeCostosIndirectos = parseFloat(c.valor)
