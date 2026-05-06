@@ -242,6 +242,18 @@ model CostoVariable {
   @@map("costos_variables")
 }
 
+model ConceptoCostoVariable {
+  id           String   @id @default(cuid())
+  nombre       String
+  montoDefecto Decimal? @db.Decimal(10,2) @map("monto_defecto")
+  descripcion  String?
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("conceptos_costos_variables")
+}
+
 // ==================== IMÁGENES DE PRENDAS ====================
 model ImagenPrenda {
   id                String   @id @default(cuid())

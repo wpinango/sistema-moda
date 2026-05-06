@@ -29,9 +29,17 @@ interface MaterialSeleccionado {
 }
 
 interface CostoVariable {
+  conceptoId: string
   concepto: string
   monto: number
   descripcion?: string
+}
+
+interface ConceptoCatalogo {
+  id: string
+  nombre: string
+  montoDefecto: number | string | null
+  descripcion: string | null
 }
 
 const SELECT_CLASS =
@@ -51,6 +59,7 @@ export default function CalculadoraPage() {
   const [materialesDisponibles, setMaterialesDisponibles] = useState<any[]>([])
   const [prendasBase, setPrendasBase] = useState<any[]>([])
   const [clientes, setClientes] = useState<any[]>([])
+  const [conceptosCatalogo, setConceptosCatalogo] = useState<ConceptoCatalogo[]>([])
   const [materialesSeleccionados, setMaterialesSeleccionados] = useState<MaterialSeleccionado[]>([])
   const [costosVariables, setCostosVariables] = useState<CostoVariable[]>([])
 
@@ -81,14 +90,16 @@ export default function CalculadoraPage() {
 
   const fetchData = async () => {
     try {
-      const [materialesRes, prendasRes, clientesRes] = await Promise.all([
+      const [materialesRes, prendasRes, clientesRes, conceptosRes] = await Promise.all([
         fetch("/api/materiales?activo=true"),
         fetch("/api/prendas/base?activo=true"),
         fetch("/api/clientes"),
+        fetch("/api/conceptos-costos-variables?activo=true"),
       ])
       if (materialesRes.ok) setMaterialesDisponibles(await materialesRes.json())
       if (prendasRes.ok) setPrendasBase(await prendasRes.json())
       if (clientesRes.ok) setClientes(await clientesRes.json())
+      if (conceptosRes.ok) setConceptosCatalogo(await conceptosRes.json())
     } catch (error) {
       toast.error("Error al cargar datos")
     }
@@ -144,13 +155,36 @@ export default function CalculadoraPage() {
   const agregarCostoVariable = () => {
     setCostosVariables([
       ...costosVariables,
-      { concepto: "", monto: 0, descripcion: "" },
+      { conceptoId: "", concepto: "", monto: 0, descripcion: "" },
     ])
   }
 
   const actualizarCostoVariable = (index: number, field: string, value: any) => {
     const nuevos = [...costosVariables]
-    nuevos[index] = { ...nuevos[index], [field]: value }
+    if (field === "conceptoId") {
+      const concepto = conceptosCatalogo.find((c) => c.id === value)
+      if (concepto) {
+        const montoSugerido =
+          concepto.montoDefecto !== null && concepto.montoDefecto !== undefined
+            ? Number(concepto.montoDefecto)
+            : 0
+        nuevos[index] = {
+          ...nuevos[index],
+          conceptoId: value,
+          concepto: concepto.nombre,
+          monto: montoSugerido,
+          descripcion: concepto.descripcion ?? nuevos[index].descripcion ?? "",
+        }
+      } else {
+        nuevos[index] = {
+          ...nuevos[index],
+          conceptoId: "",
+          concepto: "",
+        }
+      }
+    } else {
+      nuevos[index] = { ...nuevos[index], [field]: value }
+    }
     setCostosVariables(nuevos)
   }
 
@@ -218,13 +252,13 @@ export default function CalculadoraPage() {
             costoUnitario: m.costoUnitario,
             costoTotal: m.cantidad * m.costoUnitario,
           })),
-          costosVariables: costosVariables.filter((cv) => cv.concepto && cv.monto > 0),
+          costosVariables: costosVariables.filter((cv) => cv.concepto),
         }),
       })
       if (!response.ok) throw new Error("Error al guardar")
       const data = await response.json()
       if (costosVariables.length > 0 && data.id) {
-        for (const cv of costosVariables.filter((c) => c.concepto && c.monto > 0)) {
+        for (const cv of costosVariables.filter((c) => c.concepto)) {
           await fetch("/api/costos-variables", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -497,16 +531,30 @@ export default function CalculadoraPage() {
                   Costos variables
                 </CardTitle>
                 <CardDescription>
-                  Gastos específicos para esta prenda (transporte, empaque, etc.)
+                  Gastos específicos para esta prenda. Selecciona desde el
+                  catálogo de conceptos.
                 </CardDescription>
               </div>
-              <Button onClick={agregarCostoVariable} size="sm" variant="outline">
+              <Button
+                onClick={agregarCostoVariable}
+                size="sm"
+                variant="outline"
+                disabled={conceptosCatalogo.length === 0}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Agregar
               </Button>
             </CardHeader>
             <CardContent>
-              {costosVariables.length === 0 ? (
+              {conceptosCatalogo.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  No hay conceptos en el catálogo. Crea algunos en
+                  <span className="ml-1 font-medium">
+                    Configuración → Conceptos de costos variables
+                  </span>
+                  .
+                </p>
+              ) : costosVariables.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">
                   No hay costos variables agregados
                 </p>
@@ -522,14 +570,20 @@ export default function CalculadoraPage() {
                           <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
                             Concepto
                           </Label>
-                          <Input
-                            value={cv.concepto}
+                          <select
+                            value={cv.conceptoId}
                             onChange={(e) =>
-                              actualizarCostoVariable(index, "concepto", e.target.value)
+                              actualizarCostoVariable(index, "conceptoId", e.target.value)
                             }
-                            placeholder="Ej: Transporte"
-                            className="h-9"
-                          />
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                          >
+                            <option value="">Seleccionar...</option>
+                            {conceptosCatalogo.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.nombre}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                         <div className="space-y-1">
                           <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
@@ -538,11 +592,13 @@ export default function CalculadoraPage() {
                           <Input
                             type="number"
                             step="0.01"
+                            min="0"
                             value={cv.monto}
                             onChange={(e) =>
                               actualizarCostoVariable(index, "monto", Number(e.target.value))
                             }
                             className="h-9"
+                            placeholder="0.00"
                           />
                         </div>
                         <div className="space-y-1">

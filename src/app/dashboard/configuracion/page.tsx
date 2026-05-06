@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { PageHeader } from "@/components/ui/page-header"
 import { CostosFijos } from "@/components/configuracion/costos-fijos"
+import { ConceptosCostosVariables } from "@/components/configuracion/conceptos-costos-variables"
 import { Settings, DollarSign, TrendingUp, Save, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 
@@ -219,6 +220,8 @@ export default function ConfiguracionPage() {
       </Card>
 
       <CostosFijos />
+
+      <ConceptosCostosVariables />
     </div>
   )
 }
